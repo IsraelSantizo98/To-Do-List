@@ -1,56 +1,112 @@
 const formulario = document.getElementById('formulario');
 const input = document.getElementById('input');
-const listaTarea = document.getElementById('lista-tarea');
-//Siempre colocar .content a los template
+const listaTarea = document.getElementById('lista-tareas');
+//Siempre debe llevar el content
 const template = document.getElementById('template').content;
 const fragment = document.createDocumentFragment();
-let tareas = {}
-//console.log(Date.now());
-formulario.addEventListener('submit', e => {
-    //Evita el comportamineto de las etiquest html del id formulario
-    e.preventDefault();
-    /*
-    console.log(e.target[0].value);
-    console.log(e.target.querySelector('input').value);
-    console.log(inputForm.value);
-    */
-    //Creacion de forma dinamica
-    setTarea(e);
-});
-const setTarea = e => {
-    //validar que hay contenido en inputForm
-    if(input.value.trim() === ''){
-        console.log('Vacio');
-        //Sale de la funcion setTarea
-        return
+/*
+let tareas = {
+    1605990629039: {
+        id: 1605990629039,
+        texto: 'Tarea #1',
+        estado: false
+    },
+    1605990682337: {
+        id: 1605990682337,
+        texto: 'Tarea "2',
+        estado: false
     }
-    //Al detectar algo escrito se crea la tarea
-    console.log('Diste click');
+}
+*/
+//Se crea la colecion de objetos
+let tareas = {}
+//Toma todo el documento, guarda la coleccion de objetos 
+document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('tareas')) {
+        tareas = JSON.parse(localStorage.getItem('tareas'))
+    }
+    pintarTareas();
+});
+listaTarea.addEventListener('click', e => {
+    btnAccion(e)
+});
+// console.log(Date.now())
+//Toma el texto ingresado en input
+formulario.addEventListener('submit', e => {
+    e.preventDefault()
+    // console.log(e.target[0].value)
+    // console.log(e.target.querySelector('input').value)
+    // console.log(input.value)
+    setTarea(e)
+})
+//Crea id, recibe el texto y define como false la coleccion de objetos
+const setTarea = e => {
+    if (input.value.trim() === '') {
+        console.log('está vacio')
+        return
+    } 
     const tarea = {
-        //Se usa Date.now() para crear un id aleatorio
         id: Date.now(),
         texto: input.value,
         estado: false
     }
-    //Coleccion de tareas
-    tareas[tarea.id] = tarea;
-    //console.log(tareas);
-    //Si escribio algo en input, se limpia el input
-    formulario.reset();
-    //Se agrega autofocus al input en html
-    input.focus();
-    //imprimir en html la coleccion de tareas
-    pintarTareas();
-};
+    tareas[tarea.id] = tarea
+    // console.log(tareas)
+    formulario.reset()
+    input.focus()
+    pintarTareas()
+}
+//Imprime las tareas ingresadas de la coleccion de objetos
 const pintarTareas = () => {
-    listaTarea.innerHTML = '';
+    //Convierte a cadena de texto la coleccion de objetos para guardarla en localstorage
+    localStorage.setItem('tareas', JSON.stringify(tareas))
+    //Si no hay tareas inserta este texto
+    if (Object.values(tareas).length === 0) {
+        listaTarea.innerHTML = `
+        <div class="alert alert-dark text-center">
+            No hay tareas pendientes ✔
+        </div>
+        `
+        return
+    }
+    listaTarea.innerHTML = ''
     Object.values(tareas).forEach(tarea => {
-        //Realizar clone al template
         const clone = template.cloneNode(true)
-        //Se accede a p de html siguiedo la estructura y se agrega texto de la coleccion de objetos
         clone.querySelector('p').textContent = tarea.texto
+
+        if (tarea.estado) {
+            clone.querySelector('.alert').classList.replace('alert-warning', 'alert-primary')
+            clone.querySelectorAll('.fas')[0].classList.replace('fa-check-circle', 'fa-undo-alt')
+            clone.querySelector('p').style.textDecoration = 'line-through'
+        }
+
+        clone.querySelectorAll('.fas')[0].dataset.id = tarea.id
+        clone.querySelectorAll('.fas')[1].dataset.id = tarea.id
         fragment.appendChild(clone)
     })
-    //Se pasa el fragment ya modificado
     listaTarea.appendChild(fragment)
+}
+//Delegar eventos a botones
+const btnAccion = e => {
+    // console.log(e.target.classList.contains('fa-check-circle'))
+    //Cambia el estado a true en la coleccioni de objetos al completar una tarea
+    if (e.target.classList.contains('fa-check-circle')) {
+        // console.log(e.target.dataset.id)
+        tareas[e.target.dataset.id].estado = true;
+        pintarTareas();
+        // console.log(tareas)
+    }
+    //Elimina la tarea
+    if (e.target.classList.contains('fa-minus-circle')) {
+        delete tareas[e.target.dataset.id]
+        pintarTareas();
+        // console.log(tareas)
+    }
+    //Revierte el estado true a false al regresar a una tarea activa
+    if (e.target.classList.contains('fa-undo-alt')) {
+        tareas[e.target.dataset.id].estado = false;
+        pintarTareas();
+    }
+    //Pausar eventos desencadenados
+    e.stopPropagation();
 }
